@@ -8,8 +8,8 @@ resource "aws_db_instance" "postgres_rds_instance" {
   engine_version = "9.6.11"
   instance_class = "${var.postgres_rds_instance_class}"
   port = "5432"
-  name = "nextiva_db"
-  username = "nextiva"
+  name = "db_name"
+  username = "dB_user"
   password = "${var.postgres_rds_password}"
   identifier = "${var.rds_identifier}"
   vpc_security_group_ids = [
