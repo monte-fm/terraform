@@ -11,7 +11,7 @@ on:
 env:
   terraform_version:  '1.7.4'
   terragrunt_version: '0.55.14'
-  working_dir:        'terraform'
+  working_dir:        .
 
 jobs:
   terraform:
