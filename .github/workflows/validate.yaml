@@ -1,37 +1,49 @@
-name: Validate terraform
-on:
-  pull_request:
+---
+name: Validate terraform and terragrunt code
+
+on: 
   push:
-    branches:
-      - master
+    paths:
+      - '**.tf'
+      - '**.tfvars'
+      - '**/terragrunt.hcl'
+
+env:
+  terraform_version:  '1.7.4'
+  terragrunt_version: '0.55.14'
+  working_dir:        'terraform'
 
 jobs:
-  validate_tf:
-    name: Validate terraform
+  terraform:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: Install TF
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.terraform_version }}
+
+      - name: Lint Terraform
+        shell: bash
         run: |
-          sudo apt install -y software-properties-common apt-transport-https
-          curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
-          sudo apt-add-repository "deb https://apt.releases.hashicorp.com $(lsb_release -cs) main"
-          sudo apt update
-          sudo apt install -y terraform
-          terraform -v
-      - name: Validate TF
-        run: |
-          ROOT_DIR=$(pwd)
-          FOLDERS=$(find . -type f -name '*.tf' -not -path "*.terraform/*" | sed -r 's|/[^/]+$$||' | sort | uniq)
-          for f in $FOLDERS; do
-            echo "Validating folder $f"
-            cd $ROOT_DIR
-            cd $f
-            terraform init -input=false -no-color -backend=false
-            terraform validate
-            exitCode=$?
-            if [ $exitCode -ne 0 ]; then
-              echo "ERROR! $exitCode"
-              exit $exitCode
-            fi
-          done
+          terraform fmt -check -recursive -diff
+          if [[ $? !=  "0" ]]; then
+            echo "Some terraform files need to be formatted. Run 'terraform fmt -recursive' to fix them.";
+            exit 1;
+          fi
+
+  terragrunt:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check terragrunt HCL
+        uses: gruntwork-io/terragrunt-action@v2
+        with:
+          tf_version: ${{ env.terraform_version }}
+          tg_version: ${{ env.terragrunt_version }}
+          tg_dir: ${{ env.working_dir }}
+          tg_command: 'hclfmt --terragrunt-check --terragrunt-diff'
